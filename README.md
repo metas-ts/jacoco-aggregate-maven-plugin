@@ -9,7 +9,7 @@ Merge the results of all sub-modules into a single data file.
 **Parameters**
 
 Name | Description | Default | User Property
-- | - | - | -
+--- | --- | --- | ---
 skip | Skip this goal | jacoco.skip | false
 dataFile | The input data file location. | jacoco.dataFile | ${project.build.directory}/jacoco.exec
 destFile | The output data file location. | jacoco.destFile | ${project.build.directory}/jacoco.exec
@@ -20,7 +20,7 @@ Report the results of all sub-modules into single report. The report will be cre
 **Parameters**
 
 Name | Description | User Property | Default
-- | - | - | -
+--- | --- | --- | ---
 skip | Skip this goal | jacoco.skip | false
 dataFile | The data file location.  This should be the merged data file from merge goal. | jacoco.dataFile | ${project.build.directory}/jacoco.exec
 outputDirectory | The location for the report. | jacoco.outputDirectory | ${project.reporting.outputDirectory}/jacoco
