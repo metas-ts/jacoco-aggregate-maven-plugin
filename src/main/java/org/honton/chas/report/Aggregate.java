@@ -1,5 +1,6 @@
 package org.honton.chas.report;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -8,11 +9,11 @@ import org.apache.maven.project.MavenProject;
 /**
  * Track modules underneath an aggregate project
  */
-public class Aggregate {
+public class Aggregate<T extends MultiModeMojo<T>> {
 
-    final private MultiModeMojo report;
+    final private T report;
     final private int collectedSize;
-    final private Map<ProjectId,MultiModeMojo> modules = new HashMap<>();
+    final private Map<ProjectId,T> modules = new HashMap<>();
 
     /**
      * Create an Aggregate
@@ -21,10 +22,11 @@ public class Aggregate {
      * @param report The report to run once all sub-modules are done.
      * @param executionId The id which specifies execution context.
      */
-    public Aggregate(MavenProject project, MultiModeMojo report, String executionId, Object... arguments) {
+    public Aggregate(MavenProject project, T report, String executionId, Object... arguments) {
         collectedSize = project.getCollectedProjects().size();
         this.report = report;
-        collectDependents(project, ExecutionContext.getExecutionContext(executionId), arguments);
+        ExecutionContext<T> executionContext = ExecutionContext.getExecutionContext(executionId);
+        collectDependents(project, executionContext, arguments);
     }
 
     /**
@@ -32,11 +34,11 @@ public class Aggregate {
      * @param project
      * @param executionContext
      */
-    private void collectDependents(MavenProject project, ExecutionContext executionContext, Object[] arguments) {
+    private void collectDependents(MavenProject project, ExecutionContext<T> executionContext, Object[] arguments) {
         for(MavenProject collected : project.getCollectedProjects()) {
             ProjectId collectedId = new ProjectId(collected);
-            MultiModeMojo report = executionContext.findModule(collectedId, this);
-            if(report!=null) {
+            MultiModeMojo<T> module = executionContext.findModule(collectedId, this);
+            if(module!=null) {
                 addModule(collectedId, report, arguments);
             }
         }
@@ -49,14 +51,15 @@ public class Aggregate {
      * @param projectId The sub-module projectId.
      * @param module The sub-module's report.
      */
-    void addModule(ProjectId projectId, MultiModeMojo module, Object[] arguments) {
+    void addModule(ProjectId projectId, T module, Object[] arguments) {
         boolean done;
         synchronized(modules) {
             modules.put(projectId, module);
             done = modules.size() == collectedSize;
         }
         if(done) {
-            report.aggregateMode(modules.values(), arguments);
+            Collection<T> values = modules.values();
+            report.aggregateMode(values, arguments);
         }
     }
 
@@ -67,8 +70,8 @@ public class Aggregate {
      * @param mojo The report that was completed.
      * @param executionId The identity of the execution context.
      */
-    static void projectReady(MavenProject project, MultiModeMojo mojo, String executionId, Object... arguments) {
-        ExecutionContext ex= ExecutionContext.getExecutionContext(executionId);
+    static <T extends MultiModeMojo<T>> void projectReady(MavenProject project, T mojo, String executionId, Object... arguments) {
+        ExecutionContext<T> ex= ExecutionContext.getExecutionContext(executionId);
         ex.projectReady(new ProjectId(project), mojo, arguments);
     }
 }

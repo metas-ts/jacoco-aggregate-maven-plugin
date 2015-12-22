@@ -7,13 +7,12 @@ import java.util.Locale;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.reporting.MavenReport;
 import org.apache.maven.reporting.MavenReportException;
-import org.codehaus.doxia.sink.Sink;
 
 /**
  * Goal which produces aggregate reports
  */
-public abstract class AbstractAggregateReport
-    extends AbstractAggrateMojo implements MavenReport
+public abstract class AbstractAggregateReport<T extends MultiModeMojo<T>>
+    extends AbstractAggrateMojo<T> implements MavenReport
 {
     /**
      * Output directory for the reports. Note that this parameter is only
@@ -110,7 +109,7 @@ public abstract class AbstractAggregateReport
      * @throws MavenReportException if any
      */
     @Override
-    public void generate(Sink sink, Locale locale) throws MavenReportException {
+    public void generate(@SuppressWarnings("deprecation") org.codehaus.doxia.sink.Sink sink, Locale locale) throws MavenReportException {
         try {
             aggregate(sink, locale);
         } catch (UndeclaredThrowableException ute) {

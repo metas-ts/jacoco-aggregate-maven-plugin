@@ -30,7 +30,7 @@ import org.jacoco.report.html.HTMLFormatter;
 import org.jacoco.report.xml.XMLFormatter;
 
 @Mojo(name = "report", defaultPhase = LifecyclePhase.VERIFY)
-public class JacocoAggregateReport extends AbstractAggregateReport {
+public class JacocoAggregateReport extends AbstractAggregateReport<JacocoAggregateReport> {
     /**
      * Path to the output file for execution data.
      */
@@ -81,7 +81,7 @@ public class JacocoAggregateReport extends AbstractAggregateReport {
     }
 
     @Override
-    public void aggregateMode(Collection<MultiModeMojo> projectConfigurations, Object... arguments) {
+    public void aggregateMode(Collection<JacocoAggregateReport> projectConfigurations, Object... arguments) {
         subModules = projectConfigurations;
         try {
             ExecFileLoader loader = new ExecFileLoader();

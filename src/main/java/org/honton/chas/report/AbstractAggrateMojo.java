@@ -1,17 +1,18 @@
 package org.honton.chas.report;
 
+import java.lang.reflect.UndeclaredThrowableException;
+
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
-import java.lang.reflect.UndeclaredThrowableException;
-
 /**
  * Goal which aggregates mojo actions
  */
-public abstract class AbstractAggrateMojo extends AbstractMojo implements MultiModeMojo
+public abstract class AbstractAggrateMojo<T extends MultiModeMojo<T>> 
+    extends AbstractMojo implements MultiModeMojo<T>
 {
     @Parameter(defaultValue = "${mojoExecution}", readonly = true)
     MojoExecution mojoExecution;
@@ -49,13 +50,15 @@ public abstract class AbstractAggrateMojo extends AbstractMojo implements MultiM
         if(shouldSkip()) {
             return;
         }
+        @SuppressWarnings("unchecked")
+        T t = (T) this;
         String executionId = mojoExecution.getExecutionId();
         if( isAggregator() ) {
-            new Aggregate(project, this, executionId, arguments);
+            new Aggregate<>(project, t, executionId, arguments);
         }
         else {
             nonAggregateMode();
         }
-        Aggregate.projectReady(project, this, executionId);
+        Aggregate.projectReady(project, t, executionId);
     }
 }

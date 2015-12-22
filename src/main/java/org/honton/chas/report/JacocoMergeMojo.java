@@ -3,7 +3,7 @@ package org.honton.chas.report;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.util.Map;
+import java.util.Collection;
 
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -14,13 +14,19 @@ import org.jacoco.core.tools.ExecFileLoader;
  * Goal which merges aggregate coverage data
  */
 @Mojo(name = "merge", defaultPhase = LifecyclePhase.GENERATE_RESOURCES)
-public class JacocoMergeMojo extends AbstractAggrateMojo
+public class JacocoMergeMojo extends AbstractAggrateMojo<JacocoMergeMojo>
 {
     /**
      * Path to the output file for execution data.
      */
     @Parameter(property="jacoco.destFile", defaultValue="${project.build.directory}/jacoco.exec")
     File destFile;
+    
+    /**
+     * Path to the input data file for execution data in each sub-module
+     */
+    @Parameter(property = "jacoco.dataFile", defaultValue = "${project.build.directory}/jacoco.exec")
+    File dataFile;
 
     @Override
     boolean shouldSkip() {
@@ -41,20 +47,19 @@ public class JacocoMergeMojo extends AbstractAggrateMojo
     }
 
     @Override
-    public void aggregateMode( Map<ProjectId, MultiModeMojo> projectConfigurations, Object... arguments) {
+    public void aggregateMode( Collection<JacocoMergeMojo> subModules, Object... arguments) {
         final ExecFileLoader loader = new ExecFileLoader();
-        for(MultiModeMojo sp : projectConfigurations.values()) {
-            load(loader, sp);
-            getLog().info(sp.toString());
+        for(JacocoMergeMojo merge : subModules) {
+            merge.load(loader);
+            getLog().info(merge.toString());
         }
         save(loader);
     }
 
-    private void load(final ExecFileLoader loader, MultiModeMojo merge) {
-        File destFile = ((JacocoMergeMojo)merge).destFile;
-        if(destFile.exists()) {
+    private void load(final ExecFileLoader loader) {
+        if(dataFile.exists()) {
             try {
-                loader.load(destFile);
+                loader.load(dataFile);
             } catch (IOException e) {
                 throw new UndeclaredThrowableException(e);
             }
