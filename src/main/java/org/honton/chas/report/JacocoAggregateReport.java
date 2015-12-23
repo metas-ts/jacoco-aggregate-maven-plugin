@@ -81,8 +81,6 @@ public class JacocoAggregateReport extends AbstractAggregateReport<JacocoAggrega
 
     @Override
     public void aggregateMode(Collection<JacocoAggregateReport> subModules, Object... arguments) {
-        getLog().info("skipping, cannot read "+dataFile.getAbsolutePath());
-
         initialize(subModules);
 
         if (!dataFile.canRead()) {
@@ -115,7 +113,7 @@ public class JacocoAggregateReport extends AbstractAggregateReport<JacocoAggrega
 
     private void createReport(ExecutionDataStore executionDataStore, IReportGroupVisitor visitor) throws IOException {
         if (subModules==null || subModules.isEmpty()) {
-            if(dataFile.canRead()) {
+            if( classesFolder.canRead() ) {
                 IBundleCoverage bundle = createBundle(executionDataStore);
                 visitor.visitBundle(bundle, sourceFileCollection);
             }
