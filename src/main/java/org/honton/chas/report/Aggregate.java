@@ -11,7 +11,7 @@ import org.apache.maven.project.MavenProject;
  */
 public class Aggregate<T extends MultiModeMojo<T>> {
 
-    final private T report;
+    final private T mojo;
     final private int collectedSize;
     final private Map<ProjectId,T> modules = new HashMap<>();
 
@@ -19,13 +19,13 @@ public class Aggregate<T extends MultiModeMojo<T>> {
      * Create an Aggregate
      * 
      * @param project The aggregate project.
-     * @param report The report to run once all sub-modules are done.
+     * @param mojo The report to run once all sub-modules are done.
      * @param executionId The id which specifies execution context.
      */
-    public Aggregate(MavenProject project, T report, String executionId, Object... arguments) {
+    public Aggregate(MavenProject project, T mojo, String executionId, Object... arguments) {
         collectedSize = project.getCollectedProjects().size();
-        this.report = report;
-        ExecutionContext<T> executionContext = ExecutionContext.getExecutionContext(executionId);
+        this.mojo = mojo;
+        ExecutionContext<T> executionContext = ExecutionContext.getExecutionContext(mojo, executionId);
         collectDependents(project, executionContext, arguments);
     }
 
@@ -39,7 +39,7 @@ public class Aggregate<T extends MultiModeMojo<T>> {
             ProjectId collectedId = new ProjectId(collected);
             MultiModeMojo<T> module = executionContext.findModule(collectedId, this);
             if(module!=null) {
-                addModule(collectedId, report, arguments);
+                addModule(collectedId, mojo, arguments);
             }
         }
     }
@@ -59,7 +59,7 @@ public class Aggregate<T extends MultiModeMojo<T>> {
         }
         if(done) {
             Collection<T> values = modules.values();
-            report.aggregateMode(values, arguments);
+            mojo.aggregateMode(values, arguments);
         }
     }
 
@@ -71,7 +71,7 @@ public class Aggregate<T extends MultiModeMojo<T>> {
      * @param executionId The identity of the execution context.
      */
     static <T extends MultiModeMojo<T>> void projectReady(MavenProject project, T mojo, String executionId, Object... arguments) {
-        ExecutionContext<T> ex= ExecutionContext.getExecutionContext(executionId);
+        ExecutionContext<T> ex= ExecutionContext.getExecutionContext(mojo, executionId);
         ex.projectReady(new ProjectId(project), mojo, arguments);
     }
 }

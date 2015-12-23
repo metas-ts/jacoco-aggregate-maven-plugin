@@ -61,10 +61,6 @@ public class JacocoAggregateReport extends AbstractAggregateReport<JacocoAggrega
             getLog().info("skip=true");
             return true;
         }
-        if (!dataFile.canRead()) {
-            getLog().info("skipping, cannot read "+dataFile.getAbsolutePath());
-            return true;
-        }
         return false;
     }
 
@@ -74,7 +70,6 @@ public class JacocoAggregateReport extends AbstractAggregateReport<JacocoAggrega
     }
 
     private Collection<JacocoAggregateReport> subModules;
-    private ExecutionDataStore executionDataStore;
 
     private File getClassesFolder() {
         return new File(project.getBuild().getOutputDirectory());
@@ -82,36 +77,45 @@ public class JacocoAggregateReport extends AbstractAggregateReport<JacocoAggrega
 
     @Override
     public void aggregateMode(Collection<JacocoAggregateReport> projectConfigurations, Object... arguments) {
+        if (!dataFile.canRead()) {
+            getLog().info("skipping, cannot read "+dataFile.getAbsolutePath());
+            return;
+        }
+
         subModules = projectConfigurations;
         try {
             ExecFileLoader loader = new ExecFileLoader();
             loader.load(dataFile);
-            executionDataStore = loader.getExecutionDataStore();
+            ExecutionDataStore executionDataStore = loader.getExecutionDataStore();
 
             Locale locale = arguments.length > 1 ? (Locale) arguments[1] : Locale.getDefault();
             final IReportVisitor visitor = createVisitor(locale);
-            createReport(visitor);
+            visitor.visitInfo(loader.getSessionInfoStore().getInfos(), executionDataStore.getContents());
+
+            createReport(executionDataStore, visitor);
             visitor.visitEnd();
         } catch (final IOException e) {
             throw new UndeclaredThrowableException(e);
         }
     }
 
-    private IBundleCoverage createBundle() throws IOException {
+    private IBundleCoverage createBundle(ExecutionDataStore executionDataStore) throws IOException {
         CoverageBuilder builder = new CoverageBuilder();
         Analyzer analyzer = new Analyzer(executionDataStore, builder);
         analyzer.analyzeAll(getClassesFolder());
         return builder.getBundle(project.getName());
     }
 
-    private void createReport(IReportGroupVisitor visitor) throws IOException {
+    private void createReport(ExecutionDataStore executionDataStore, IReportGroupVisitor visitor) throws IOException {
         if (subModules==null || subModules.isEmpty()) {
-            IBundleCoverage bundle = createBundle();
-            visitor.visitBundle(bundle, new SourceFileCollection());
+            if(dataFile.canRead()) {
+                IBundleCoverage bundle = createBundle(executionDataStore);
+                visitor.visitBundle(bundle, new SourceFileCollection());
+            }
         } else {
             final IReportGroupVisitor groupVisitor = visitor.visitGroup(project.getName());
             for (JacocoAggregateReport module : subModules) {
-                module.createReport(groupVisitor);
+                module.createReport(executionDataStore, groupVisitor);
             }
         }
     }

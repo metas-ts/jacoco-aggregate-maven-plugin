@@ -17,15 +17,17 @@ class ExecutionContext<T extends MultiModeMojo<T>> {
     static ConcurrentMap<String,ExecutionContext<?>> contexts = new ConcurrentHashMap<>();
 
     /**
-     * Get the ExecutionContext for a given identity. 
-     * @param executionId
+     * Get the ExecutionContext for a given identity.
+     * @param mojo The goal being executed.
+     * @param executionId The goal's configuration id.
      * @return The newly or previously associated context.
      */
-    static <T extends MultiModeMojo<T>> ExecutionContext<T> getExecutionContext(String executionId) {
-        ExecutionContext<?> ec = contexts.get(executionId);
+    static <T extends MultiModeMojo<T>> ExecutionContext<T> getExecutionContext(MultiModeMojo<T> mojo, String executionId) {
+        String id = mojo.getClass().getCanonicalName()+":"+executionId;
+        ExecutionContext<?> ec = contexts.get(id);
         if(ec==null) {
             ec = new ExecutionContext<T>();
-            ExecutionContext<?> prior = contexts.putIfAbsent(executionId, ec);
+            ExecutionContext<?> prior = contexts.putIfAbsent(id, ec);
             if(prior!=null) {
                 ec= prior;
             }

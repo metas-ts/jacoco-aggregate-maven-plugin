@@ -34,10 +34,6 @@ public class JacocoMergeMojo extends AbstractAggrateMojo<JacocoMergeMojo>
             getLog().info("skip=true");
             return true;
         }
-        if (!destFile.canRead()) {
-            getLog().info("skipping, cannot read " + destFile.getAbsolutePath());
-            return true;
-        }
         return false;
     }
 
