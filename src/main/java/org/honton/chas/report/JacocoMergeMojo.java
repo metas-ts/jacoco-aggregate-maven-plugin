@@ -43,22 +43,25 @@ public class JacocoMergeMojo extends AbstractAggregateMojo<JacocoMergeMojo>
     }
 
     @Override
-    public void aggregateMode( Collection<JacocoMergeMojo> subModules, Object... arguments) {
+    public void aggregateMode(Collection<JacocoMergeMojo> subModules, Object... arguments) {
         final ExecFileLoader loader = new ExecFileLoader();
         for(JacocoMergeMojo merge : subModules) {
             merge.load(loader);
-            getLog().info(merge.toString());
         }
         save(loader);
     }
 
     private void load(final ExecFileLoader loader) {
-        if(dataFile.exists()) {
+        if(dataFile.canRead()) {
             try {
+                getLog().info("merging data file " + dataFile);
                 loader.load(dataFile);
             } catch (IOException e) {
                 throw new UndeclaredThrowableException(e);
             }
+        }
+        else {
+            getLog().info("missing data file " + dataFile);
         }
     }
 

@@ -26,22 +26,44 @@ public class Aggregate<T extends MultiModeMojo<T>> {
         collectedSize = project.getCollectedProjects().size();
         this.mojo = mojo;
         ExecutionContext<T> executionContext = ExecutionContext.getExecutionContext(mojo, executionId);
-        collectDependents(project, executionContext, arguments);
+        collectDependents(project, executionContext);
+
+        if(allModulesVisited()) {
+            signalGoal(arguments);
+        };
     }
 
     /**
      * Add all sub-modules of project to modules.
      * @param project
      * @param executionContext
+     * @return true if all sub-modules already visited.
      */
-    private void collectDependents(MavenProject project, ExecutionContext<T> executionContext, Object[] arguments) {
+    private void collectDependents(MavenProject project, ExecutionContext<T> executionContext) {
         for(MavenProject collected : project.getCollectedProjects()) {
             ProjectId collectedId = new ProjectId(collected);
-            MultiModeMojo<T> module = executionContext.findModule(collectedId, this);
-            if(module!=null) {
-                addModule(collectedId, mojo, arguments);
+            T module = executionContext.findModule(collectedId, this);
+            if (module != null) {
+                modules.put(collectedId, module);
             }
         }
+    }
+
+    /**
+     * Have all modules been visited?
+     * @return true if all sub-modules already visited.
+     */
+    private boolean allModulesVisited() {
+        return modules.size() == collectedSize;
+    }
+
+    /**
+     * Run the goal
+     * @param arguments
+     */
+    private void signalGoal(Object[] arguments) {
+        Collection<T> values = modules.values();
+        mojo.aggregateMode(values, arguments);
     }
 
     /**
@@ -55,11 +77,10 @@ public class Aggregate<T extends MultiModeMojo<T>> {
         boolean done;
         synchronized(modules) {
             modules.put(projectId, module);
-            done = modules.size() == collectedSize;
+            done = allModulesVisited();
         }
         if(done) {
-            Collection<T> values = modules.values();
-            mojo.aggregateMode(values, arguments);
+            signalGoal(arguments);
         }
     }
 

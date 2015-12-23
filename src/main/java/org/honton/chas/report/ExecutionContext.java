@@ -37,12 +37,11 @@ class ExecutionContext<T extends MultiModeMojo<T>> {
         return context;
     }
 
-    
     // from already visited projects to project Configuration
-    private Map<ProjectId,MultiModeMojo<T>> visited = new HashMap<>();
+    private final Map<ProjectId, T> visited = new HashMap<>();
 
     // from needed projects to already visited projects
-    private Map<ProjectId, List<Aggregate<T>>> neededToVisited = new HashMap<>();
+    private final Map<ProjectId, List<Aggregate<T>>> neededToVisited = new HashMap<>();
 
     /**
      * Signal the execution context that a sub-module just completed a report.
@@ -69,9 +68,9 @@ class ExecutionContext<T extends MultiModeMojo<T>> {
      * @param aggregator The report generator.
      * @return If found, the previously created report; null, if not found (Does not return newly created report)
      */
-    MultiModeMojo<T> findModule(ProjectId collectedId, Aggregate<T> aggregator) {
+    T findModule(ProjectId collectedId, Aggregate<T> aggregator) {
         synchronized(visited) {
-            MultiModeMojo<T> foundDependency = visited.get(collectedId);
+            T foundDependency = visited.get(collectedId);
             if(foundDependency!=null) {
                 return foundDependency;
             }

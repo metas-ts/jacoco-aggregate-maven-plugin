@@ -55,6 +55,16 @@ public class JacocoAggregateReport extends AbstractAggregateReport<JacocoAggrega
     @Parameter(property = "project.reporting.sourceEncoding", defaultValue = "UTF-8")
     String sourceEncoding;
 
+    private Collection<JacocoAggregateReport> subModules;
+    private File classesFolder;
+    private SourceFileCollection sourceFileCollection;
+
+    private void initialize(Collection<JacocoAggregateReport> subModules) {
+        this.subModules = subModules;
+        classesFolder = new File(project.getBuild().getOutputDirectory());
+        sourceFileCollection = new SourceFileCollection();
+    }
+
     @Override
     boolean shouldSkip() {
         if (skip) {
@@ -66,23 +76,20 @@ public class JacocoAggregateReport extends AbstractAggregateReport<JacocoAggrega
 
     @Override
     public void nonAggregateMode(Object... arguments) {
-        // nothing to do...
-    }
-
-    private Collection<JacocoAggregateReport> subModules;
-
-    private File getClassesFolder() {
-        return new File(project.getBuild().getOutputDirectory());
+        initialize(null);
     }
 
     @Override
-    public void aggregateMode(Collection<JacocoAggregateReport> projectConfigurations, Object... arguments) {
+    public void aggregateMode(Collection<JacocoAggregateReport> subModules, Object... arguments) {
+        getLog().info("skipping, cannot read "+dataFile.getAbsolutePath());
+
+        initialize(subModules);
+
         if (!dataFile.canRead()) {
             getLog().info("skipping, cannot read "+dataFile.getAbsolutePath());
             return;
         }
 
-        subModules = projectConfigurations;
         try {
             ExecFileLoader loader = new ExecFileLoader();
             loader.load(dataFile);
@@ -102,7 +109,7 @@ public class JacocoAggregateReport extends AbstractAggregateReport<JacocoAggrega
     private IBundleCoverage createBundle(ExecutionDataStore executionDataStore) throws IOException {
         CoverageBuilder builder = new CoverageBuilder();
         Analyzer analyzer = new Analyzer(executionDataStore, builder);
-        analyzer.analyzeAll(getClassesFolder());
+        analyzer.analyzeAll(classesFolder);
         return builder.getBundle(project.getName());
     }
 
@@ -110,7 +117,7 @@ public class JacocoAggregateReport extends AbstractAggregateReport<JacocoAggrega
         if (subModules==null || subModules.isEmpty()) {
             if(dataFile.canRead()) {
                 IBundleCoverage bundle = createBundle(executionDataStore);
-                visitor.visitBundle(bundle, new SourceFileCollection());
+                visitor.visitBundle(bundle, sourceFileCollection);
             }
         } else {
             final IReportGroupVisitor groupVisitor = visitor.visitGroup(project.getName());
@@ -152,12 +159,22 @@ public class JacocoAggregateReport extends AbstractAggregateReport<JacocoAggrega
 
     private class SourceFileCollection implements ISourceFileLocator {
 
+        final List<File> sourceRoots;
+
+        SourceFileCollection() {
+            List<String> projectSourceRoots = project.getCompileSourceRoots();
+            sourceRoots = new ArrayList<>(projectSourceRoots.size());
+            for (String sourceRoot : projectSourceRoots) {
+                sourceRoots.add(resolvePath(sourceRoot));
+            }
+        }
+
         public Reader getSourceFile(final String packageName, final String fileName) throws IOException {
             final String fullName = fullClassName(packageName, fileName);
 
-            for (String sourceRoot : project.getCompileSourceRoots()) {
-                final File file = new File(resolvePath(sourceRoot), fullName);
-                if (file.exists() && file.isFile()) {
+            for (File sourceRoot : sourceRoots) {
+                File file = new File(sourceRoot, fullName);
+                if (file.canRead()) {
                     return new InputStreamReader(new FileInputStream(file), sourceEncoding);
                 }
             }
