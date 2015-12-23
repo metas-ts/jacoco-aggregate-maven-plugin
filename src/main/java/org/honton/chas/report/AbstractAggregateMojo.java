@@ -11,7 +11,7 @@ import org.apache.maven.project.MavenProject;
 /**
  * Goal which aggregates mojo actions
  */
-public abstract class AbstractAggrateMojo<T extends MultiModeMojo<T>> 
+public abstract class AbstractAggregateMojo<T extends MultiModeMojo<T>>
     extends AbstractMojo implements MultiModeMojo<T>
 {
     @Parameter(defaultValue = "${mojoExecution}", readonly = true)

@@ -14,7 +14,7 @@ import org.jacoco.core.tools.ExecFileLoader;
  * Goal which merges aggregate coverage data
  */
 @Mojo(name = "merge", defaultPhase = LifecyclePhase.GENERATE_RESOURCES)
-public class JacocoMergeMojo extends AbstractAggrateMojo<JacocoMergeMojo>
+public class JacocoMergeMojo extends AbstractAggregateMojo<JacocoMergeMojo>
 {
     /**
      * Path to the output file for execution data.

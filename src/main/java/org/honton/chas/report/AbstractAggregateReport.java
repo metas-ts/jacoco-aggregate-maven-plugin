@@ -12,7 +12,7 @@ import org.apache.maven.reporting.MavenReportException;
  * Goal which produces aggregate reports
  */
 public abstract class AbstractAggregateReport<T extends MultiModeMojo<T>>
-    extends AbstractAggrateMojo<T> implements MavenReport
+    extends AbstractAggregateMojo<T> implements MavenReport
 {
     /**
      * Output directory for the reports. Note that this parameter is only
