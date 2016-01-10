@@ -6,15 +6,19 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 
+import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
+import org.apache.maven.reporting.MavenReport;
+import org.apache.maven.reporting.MavenReportException;
 import org.jacoco.core.analysis.Analyzer;
 import org.jacoco.core.analysis.CoverageBuilder;
 import org.jacoco.core.analysis.IBundleCoverage;
@@ -29,98 +33,199 @@ import org.jacoco.report.csv.CSVFormatter;
 import org.jacoco.report.html.HTMLFormatter;
 import org.jacoco.report.xml.XMLFormatter;
 
-@Mojo(name = "report", defaultPhase = LifecyclePhase.VERIFY)
-public class JacocoAggregateReport extends AbstractAggregateReport<JacocoAggregateReport> {
-    /**
-     * Path to the output file for execution data.
-     */
-    @Parameter(property = "jacoco.dataFile", defaultValue = "${project.build.directory}/jacoco.exec")
-    File dataFile;
+/**
+ * Goal to create aggregate jacoco coverage report
+ */
+@Mojo(name = "report", defaultPhase = LifecyclePhase.VERIFY, aggregator= true)
+public class JacocoAggregateReport extends AbstractMojo implements MavenReport {
+
+    @Parameter(property = "session.currentProject", readonly = true)
+    private MavenProject project;
 
     /**
      * Path to the output file for execution data.
      */
     @Parameter(property = "jacoco.outputDirectory", defaultValue = "${project.reporting.outputDirectory}/jacoco")
-    File outputDirectory;
+    private File outputDirectory;
+
+    /**
+     * Path to the output file for execution data.
+     */
+    @Parameter(property = "jacoco.dataFile", defaultValue = "${project.build.directory}/jacoco.exec")
+    private File dataFile;
 
     /**
      * Encoding of the generated reports.
      */
     @Parameter(property = "project.reporting.outputEncoding", defaultValue = "UTF-8")
-    String outputEncoding;
+    private String outputEncoding;
 
     /**
      * Encoding of the source files.
      */
     @Parameter(property = "project.reporting.sourceEncoding", defaultValue = "UTF-8")
-    String sourceEncoding;
+    private String sourceEncoding;
 
-    private Collection<JacocoAggregateReport> subModules;
-    private File classesFolder;
-    private SourceFileCollection sourceFileCollection;
-
-    private void initialize(Collection<JacocoAggregateReport> subModules) {
-        this.subModules = subModules;
-        classesFolder = new File(project.getBuild().getOutputDirectory());
-        sourceFileCollection = new SourceFileCollection();
+    /**
+     * @param locale the wanted locale to return the report's description, could be null.
+     * @return the description of this report.
+     */
+    @Override
+    public String getDescription(Locale locale) {
+        return "jacoco aggregate report";
     }
 
+    /**
+     * @param locale the wanted locale to return the report's name, could be null.
+     * @return the name of this report.
+     */
     @Override
-    boolean shouldSkip() {
-        if (skip) {
-            getLog().info("skip=true");
-            return true;
+    public String getName(Locale locale) {
+        return "jacoco";
+    }
+
+    /**
+     * @return the output name of this report.
+     */
+    @Override
+    public String getOutputName() {
+        return "jacoco/index";
+    }
+
+    /**
+     * Get the category name for this report.
+     *
+     * @return the category name of this report.
+     */
+    @Override
+    public String getCategoryName() {
+        return CATEGORY_PROJECT_REPORTS;
+    }
+
+    /**
+     * Set a new output directory. Useful for staging.
+     *
+     * @param outputDirectory the new output directory
+     */
+    @Override
+    public void setReportOutputDirectory(File outputDirectory) {
+        this.outputDirectory = outputDirectory;
+    }
+
+    /**
+     * @return the current report output directory.
+     */
+    @Override
+    public File getReportOutputDirectory() {
+        return outputDirectory;
+    }
+
+    /**
+     * An external report is a report which calls a third party program which generates reports.
+     * A good example is javadoc.
+     *
+     * @return <tt>true</tt> if this report is external, <tt>false</tt> otherwise.
+     */
+    @Override
+    public boolean isExternalReport() {
+        return true;
+    }
+
+    /**
+     * Flag used to suppress execution.
+     */
+    @Parameter(property="jacoco.skip", defaultValue = "false")
+    boolean skip;
+
+    /**
+     * Verify some conditions before generate the report.
+     *
+     * @return <tt>true</tt> if this report could be generated, <tt>false</tt> otherwise.
+     */
+    @Override
+    public boolean canGenerateReport() {
+        return !skip;
+    }
+
+
+    /**
+     * Generate the report depending the wanted locale. <br/>
+     * Mainly used for external reports like javadoc.
+     *
+     * @param sink
+     *            the sink to use for the generation.
+     * @param locale
+     *            the wanted locale to generate the report, could be null.
+     * @throws MavenReportException
+     *             if any
+     */
+    @Override
+    public void generate(@SuppressWarnings("deprecation") org.codehaus.doxia.sink.Sink sink, Locale locale)
+            throws MavenReportException {
+        try {
+            report(null);
+        } catch (IOException io) {
+            throw new MavenReportException(io.getMessage(), io);
         }
-        return false;
     }
 
     @Override
-    public void nonAggregateMode(Object... arguments) {
-        initialize(null);
+    public void execute() throws MojoExecutionException, MojoFailureException {
+        try {
+            report(null);
+        } catch (IOException io) {
+            throw new MojoExecutionException(io.getMessage(), io);
+        }
     }
 
-    @Override
-    public void aggregateMode(Collection<JacocoAggregateReport> subModules, Object... arguments) {
-        initialize(subModules);
-
-        if (!dataFile.canRead()) {
-            getLog().info("skipping, cannot read "+dataFile.getAbsolutePath());
+    void report(Locale locale) throws IOException {
+        if (skip) {
+            getLog().info("skipping");
             return;
         }
 
-        try {
-            ExecFileLoader loader = new ExecFileLoader();
-            loader.load(dataFile);
-            ExecutionDataStore executionDataStore = loader.getExecutionDataStore();
-
-            Locale locale = arguments.length > 1 ? (Locale) arguments[1] : Locale.getDefault();
-            final IReportVisitor visitor = createVisitor(locale);
-            visitor.visitInfo(loader.getSessionInfoStore().getInfos(), executionDataStore.getContents());
-
-            createReport(executionDataStore, visitor);
-            visitor.visitEnd();
-        } catch (final IOException e) {
-            throw new UndeclaredThrowableException(e);
+        if (!dataFile.canRead()) {
+            getLog().info("cannot read " + dataFile.getAbsolutePath());
+            return;
         }
+
+        if (locale == null) {
+            locale = Locale.getDefault();
+        }
+
+        ExecFileLoader loader = new ExecFileLoader();
+        loader.load(dataFile);
+        ExecutionDataStore executionDataStore = loader.getExecutionDataStore();
+
+        final IReportVisitor visitor = createVisitor(locale);
+        visitor.visitInfo(loader.getSessionInfoStore().getInfos(), executionDataStore.getContents());
+
+        createReport(project, executionDataStore, visitor);
+        visitor.visitEnd();
     }
 
-    private IBundleCoverage createBundle(ExecutionDataStore executionDataStore) throws IOException {
+    private static IBundleCoverage createBundle(MavenProject project, ExecutionDataStore executionDataStore) throws IOException {
+        File classesFolder = new File(project.getBuild().getOutputDirectory());
+        if (!classesFolder.canRead()) {
+            return null;
+        }
         CoverageBuilder builder = new CoverageBuilder();
         Analyzer analyzer = new Analyzer(executionDataStore, builder);
         analyzer.analyzeAll(classesFolder);
         return builder.getBundle(project.getName());
     }
 
-    private void createReport(ExecutionDataStore executionDataStore, IReportGroupVisitor visitor) throws IOException {
-        if (subModules==null || subModules.isEmpty()) {
-            if( classesFolder.canRead() ) {
-                IBundleCoverage bundle = createBundle(executionDataStore);
-                visitor.visitBundle(bundle, sourceFileCollection);
+    private void createReport(MavenProject project, ExecutionDataStore executionDataStore, IReportGroupVisitor visitor)
+            throws IOException {
+        if (project.getCollectedProjects().size() == 0) {
+            IBundleCoverage bundle = createBundle(project, executionDataStore);
+            if (bundle != null) {
+                visitor.visitBundle(bundle, new SourceFileCollection(project));
             }
         } else {
             final IReportGroupVisitor groupVisitor = visitor.visitGroup(project.getName());
-            for (JacocoAggregateReport module : subModules) {
-                module.createReport(executionDataStore, groupVisitor);
+            for (MavenProject module : project.getCollectedProjects()) {
+                createReport(module, executionDataStore, groupVisitor);
             }
         }
     }
@@ -146,25 +251,25 @@ public class JacocoAggregateReport extends AbstractAggregateReport<JacocoAggrega
         return new MultiReportVisitor(visitors);
     }
 
-    private File resolvePath(String path) {
-        File file = new File(path);
-        return file.isAbsolute() ? file : new File(project.getBasedir(), path);
-    }
-
-    private static String fullClassName(final String packageName, final String fileName) {
-        return packageName.isEmpty() ?fileName :packageName + '/' + fileName;
-    }
-
     private class SourceFileCollection implements ISourceFileLocator {
 
         final List<File> sourceRoots;
 
-        SourceFileCollection() {
+        SourceFileCollection(MavenProject project) {
             List<String> projectSourceRoots = project.getCompileSourceRoots();
             sourceRoots = new ArrayList<>(projectSourceRoots.size());
             for (String sourceRoot : projectSourceRoots) {
-                sourceRoots.add(resolvePath(sourceRoot));
+                sourceRoots.add(resolvePath(project, sourceRoot));
             }
+        }
+
+        private File resolvePath(MavenProject project, String path) {
+            File file = new File(path);
+            return file.isAbsolute() ? file : new File(project.getBasedir(), path);
+        }
+
+        private String fullClassName(final String packageName, final String fileName) {
+            return packageName.isEmpty() ? fileName : packageName + '/' + fileName;
         }
 
         public Reader getSourceFile(final String packageName, final String fileName) throws IOException {
