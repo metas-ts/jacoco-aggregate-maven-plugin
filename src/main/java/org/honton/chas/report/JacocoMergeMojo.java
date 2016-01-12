@@ -3,9 +3,6 @@ package org.honton.chas.report;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.maven.execution.MavenSession;
-import org.apache.maven.plugin.AbstractMojo;
-import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -17,18 +14,9 @@ import org.jacoco.core.tools.ExecFileLoader;
 /**
  * Goal which merges aggregate coverage data
  */
-@Mojo(name = "merge", defaultPhase = LifecyclePhase.GENERATE_RESOURCES, aggregator=true)
-public class JacocoMergeMojo extends AbstractMojo
+@Mojo(name = "merge", defaultPhase = LifecyclePhase.PREPARE_PACKAGE, aggregator=true)
+public class JacocoMergeMojo extends JacocoAbstractMojo
 {
-    @Parameter(property = "mojoExecution", readonly = true)
-    private MojoExecution mojoExecution;
-
-    @Parameter(property = "session.currentProject", readonly = true)
-    private MavenProject project;
-
-    @Parameter( property = "session", readonly = true )
-    private MavenSession session;
-
     /**
      * Path to the output file for execution data.
      */
@@ -41,14 +29,10 @@ public class JacocoMergeMojo extends AbstractMojo
     @Parameter(property = "jacoco.dataFile", defaultValue = "target/jacoco.exec")
     String dataFile;
 
-    /**
-     * Flag used to suppress execution.
-     */
-    @Parameter(property="jacoco.skip", defaultValue = "false")
-    boolean skip;
-
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
+        verifyValidPhase();
+
         if ( skip || project.getCollectedProjects().size()==0 ) {
             return;
         }

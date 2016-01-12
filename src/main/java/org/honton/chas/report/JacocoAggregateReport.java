@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -37,10 +36,7 @@ import org.jacoco.report.xml.XMLFormatter;
  * Goal to create aggregate jacoco coverage report
  */
 @Mojo(name = "report", defaultPhase = LifecyclePhase.VERIFY, aggregator= true)
-public class JacocoAggregateReport extends AbstractMojo implements MavenReport {
-
-    @Parameter(property = "session.currentProject", readonly = true)
-    private MavenProject project;
+public class JacocoAggregateReport extends JacocoAbstractMojo implements MavenReport {
 
     /**
      * Path to the output file for execution data.
@@ -132,12 +128,6 @@ public class JacocoAggregateReport extends AbstractMojo implements MavenReport {
     }
 
     /**
-     * Flag used to suppress execution.
-     */
-    @Parameter(property="jacoco.skip", defaultValue = "false")
-    boolean skip;
-
-    /**
      * Verify some conditions before generate the report.
      *
      * @return <tt>true</tt> if this report could be generated, <tt>false</tt> otherwise.
@@ -146,7 +136,6 @@ public class JacocoAggregateReport extends AbstractMojo implements MavenReport {
     public boolean canGenerateReport() {
         return !skip;
     }
-
 
     /**
      * Generate the report depending the wanted locale. <br/>
@@ -172,6 +161,7 @@ public class JacocoAggregateReport extends AbstractMojo implements MavenReport {
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         try {
+            verifyValidPhase();
             report(null);
         } catch (IOException io) {
             throw new MojoExecutionException(io.getMessage(), io);
@@ -179,6 +169,7 @@ public class JacocoAggregateReport extends AbstractMojo implements MavenReport {
     }
 
     void report(Locale locale) throws IOException {
+
         if (skip) {
             getLog().info("skipping");
             return;
