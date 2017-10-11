@@ -10,9 +10,9 @@ Merge the results of all sub-modules into a single data file.
 
 Name | Description | Default | User Property
 --- | --- | --- | ---
-skip | Skip this goal | jacoco.skip | false
-dataFile | The input data file location. | jacoco.dataFile | ${project.build.directory}/jacoco.exec
-destFile | The output data file location. | jacoco.destFile | ${project.build.directory}/jacoco.exec
+skip | Skip this goal | false| jacoco.skip 
+dataFile | The input data file location. | ${project.build.directory}/jacoco.exec| jacoco.dataFile 
+destFile | The output data file location. | ${project.build.directory}/jacoco.exec| jacoco.destFile 
 
 ### report
 Report the results of all sub-modules into single report. The report will be created in xml, csv, and html formats.
